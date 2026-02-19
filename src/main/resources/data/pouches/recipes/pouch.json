@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "show_notification": false,
+  "category": "equipment",
+  "pattern": [
+    "   ",
+    "LNL",
+    " L "
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:iron_nugget"
+    },
+    "L": {
+      "item": "minecraft:leather"
+    }
+  },
+  "result": {
+    "item": "pouches:pouch",
+    "count": 1
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "size": 3,
+  "operation": "SET",
+  "icon": "pouches:slot/pouch_slot",
+  "order": 100
+}

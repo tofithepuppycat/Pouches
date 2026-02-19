@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "pouches:pouch",
+    "pouches:iron_pouch",
+    "pouches:diamond_pouch"
+  ]
+}

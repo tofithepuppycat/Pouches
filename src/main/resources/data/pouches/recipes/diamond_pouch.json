@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "show_notification": false,
+  "category": "equipment",
+  "pattern": [
+    "   ",
+    "LNL",
+    " P "
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:diamond"
+    },
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "P": {
+      "item": "pouches:iron_pouch"
+    }
+  },
+  "result": {
+    "item": "pouches:diamond_pouch",
+    "count": 1
+  }
+}
