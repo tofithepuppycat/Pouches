@@ -1,8 +1,12 @@
 {
-  "key.pouches.show_image": "Open Pouch Wheel",
   "curios.identifier.pouch": "Pouch",
   "curios.modifiers.pouch": "When in pouch slot:",
   "item.pouches.pouch": "Leather Pouch",
   "item.pouches.iron_pouch": "Iron Pouch",
-  "item.pouches.diamond_pouch": "Diamond Pouch"
+  "item.pouches.diamond_pouch": "Diamond Pouch",
+  "item.pouches.netherite_pouch": "Netherite Pouch",
+  "enchantment.pouches.pouch_slots": "Pouched",
+  "enchantment.pouches.pouch_slots.desc": "Adds an extra pouch slot",
+  "key.categories.pouches": "Pouches",
+  "key.pouches.show_image": "Open Pouch Wheel"
 }

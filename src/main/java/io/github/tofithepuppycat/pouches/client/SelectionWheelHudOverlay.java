@@ -43,10 +43,19 @@ public final class SelectionWheelHudOverlay {
         new ResourceLocation(Pouches.MODID, "textures/gui/wheel_cap4_slot_3_selected.png")
     };
 
+    private static final ResourceLocation[] SLOT_6_SELECTED = new ResourceLocation[] {
+        new ResourceLocation(Pouches.MODID, "textures/gui/wheel_cap6_slot_0_selected.png"),
+        new ResourceLocation(Pouches.MODID, "textures/gui/wheel_cap6_slot_1_selected.png"),
+        new ResourceLocation(Pouches.MODID, "textures/gui/wheel_cap6_slot_2_selected.png"),
+        new ResourceLocation(Pouches.MODID, "textures/gui/wheel_cap6_slot_3_selected.png"),
+        new ResourceLocation(Pouches.MODID, "textures/gui/wheel_cap6_slot_4_selected.png"),
+        new ResourceLocation(Pouches.MODID, "textures/gui/wheel_cap6_slot_5_selected.png")
+    };
+
     private static final int TEX_W = 256;
     private static final int TEX_H = 256;
 
-    private static final float SCREEN_FRACTION = 0.35f;
+    private static final float BASE_SIZE = 64.0f; // Base wheel size at GUI scale 1
 
     private static int selectedSlot = -1;
     private static int previousSelectedSlot = -1;
@@ -75,25 +84,33 @@ public final class SelectionWheelHudOverlay {
             return;
         }
 
-        int minDim = Math.min(width, height);
-        float targetPx = minDim * SCREEN_FRACTION;
-        float scale = targetPx / (float) TEX_W;
+        // Don't show overlay if player in a menu
+        if (mc.screen != null) {
+            return;
+        }
+
+        // Scale based on GUI scale instead of window size
+        double guiScale = mc.getWindow().getGuiScale();
+        float scale = (float)(BASE_SIZE * guiScale / TEX_W);
 
         float scaledW = TEX_W * scale;
         float scaledH = TEX_H * scale;
 
-        float x = (width - scaledW) / 2.0f;
-        float y = (height - scaledH) / 2.0f;
+        float x = (width - scaledW) * 0.5f;
+        float y = (height - scaledH) * 0.5f;
 
-        float centerX = width / 2.0f;
-        float centerY = height / 2.0f;
+        float centerX = width * 0.5f;
+        float centerY = height * 0.5f;
+
+        // Cache slot count for optimization
+        int slotCount = Math.max(1, ClientPouchData.getSlotsInPouch(player.getUUID(), currentPouchIndex));
 
         // Calculate mouse position (scaled coordinates)
         double mouseX = mc.mouseHandler.xpos() * (double)mc.getWindow().getGuiScaledWidth() / (double)mc.getWindow().getScreenWidth();
         double mouseY = mc.mouseHandler.ypos() * (double)mc.getWindow().getGuiScaledHeight() / (double)mc.getWindow().getScreenHeight();
         
         // Detect key press (transition from not pressed to pressed) and reset mouse position
-        if (!wasKeyDown && isKeyDown) {
+        if (!wasKeyDown) {
             initialMouseX = mouseX;
             initialMouseY = mouseY;
             wasKeyDown = true;
@@ -105,35 +122,31 @@ public final class SelectionWheelHudOverlay {
         float distanceFromCenter = (float)Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
         // Dead zone in the center - no selection if mouse is too close to center
-        // This makes selection easier for both low and high sensitivity users
         float deadZoneRadius = Math.min(scaledW, scaledH) * 0.16f;
-        
-        // Calculate angle from center to mouse
-        double angle = Math.toDegrees(Math.atan2(deltaY, deltaX));
-        if (angle < 0) angle += 360;
-        angle = (angle + 90) % 360; // Rotate so top is 0°
-
-        // Determine how many slots the current pouch has
-        int slotCount = 2;
-        if (player != null) {
-            slotCount = Math.max(1, ClientPouchData.getSlotsInPouch(player.getUUID(), currentPouchIndex));
-        }
 
         // Calculate which slot is selected based on angle
         // Only select if mouse is outside the dead zone
         if (distanceFromCenter > deadZoneRadius) {
+            // Calculate angle from center to mouse
+            double angle = Math.toDegrees(Math.atan2(deltaY, deltaX));
+            if (angle < 0) angle += 360;
+            angle = (angle + 90) % 360; // Rotate so top is 0°
+            
             // For 4-slot pouches, add 45-degree offset to align with diagonal slots
-            double adjustedAngle = angle;
             if (slotCount == 4) {
-                // Slot positions: 0=upper-left, 1=upper-right, 2=lower-right, 3=lower-left
-                adjustedAngle = (angle + 45) % 360;
+                angle = (angle + 45) % 360;
             }
+            // For 6-slot pouches, add 30-degree offset to align with upper-left start
+            else if (slotCount == 6) {
+                angle = (angle + 30) % 360;
+            }
+            
             float degreesPerSlot = 360.0f / slotCount;
-            int newSelectedSlot = (int)((adjustedAngle + degreesPerSlot / 2) % 360 / degreesPerSlot) % slotCount;
+            int newSelectedSlot = (int)((angle + degreesPerSlot * 0.5f) / degreesPerSlot) % slotCount;
             
             // Play sound if selection changed
-            if (newSelectedSlot != previousSelectedSlot && newSelectedSlot >= 0 && mc.level != null && mc.player != null) {
-                mc.level.playLocalSound(mc.player.getX(), mc.player.getY(), mc.player.getZ(),
+            if (newSelectedSlot != previousSelectedSlot && newSelectedSlot >= 0 && mc.level != null) {
+                mc.level.playLocalSound(player.getX(), player.getY(), player.getZ(),
                     SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.PLAYERS, 0.3f, 2.5f, false);
                 previousSelectedSlot = newSelectedSlot;
             }
@@ -146,13 +159,30 @@ public final class SelectionWheelHudOverlay {
             selectedSlot = -1;
         }
 
+        // Get the color of the current pouch; -1 means undyed (no tint)
+        int pouchColor = PouchHelper.getPouchColor(player, currentPouchIndex);
+        float red, green, blue;
+        if (pouchColor == -1) {
+            red = 1.0f; green = 1.0f; blue = 1.0f;
+        } else {
+            red   = ((pouchColor >> 16) & 0xFF) / 255.0f;
+            green = ((pouchColor >> 8)  & 0xFF) / 255.0f;
+            blue  = (pouchColor         & 0xFF) / 255.0f;
+
+            // Boost saturation by amplifying deviation from neutral gray
+            float satBoost = 1.6f;
+            red   = Math.min(1.0f, Math.max(0.0f, 0.5f + (red   - 0.5f) * satBoost));
+            green = Math.min(1.0f, Math.max(0.0f, 0.5f + (green - 0.5f) * satBoost));
+            blue  = Math.min(1.0f, Math.max(0.0f, 0.5f + (blue  - 0.5f) * satBoost));
+        }
+
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, WHEEL);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
 
-        // Set semi-transparent (70% opacity)
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 0.7f);
+        // Set semi-transparent (85% opacity) with pouch color tint
+        RenderSystem.setShaderColor(red, green, blue, 0.85f);
 
         gfx.pose().pushPose();
         gfx.pose().translate(x, y, 0);
@@ -169,11 +199,20 @@ public final class SelectionWheelHudOverlay {
                 selectionTexture = SLOT_3_SELECTED[selectedSlot];
             } else if (slotCount == 4 && selectedSlot < SLOT_4_SELECTED.length) {
                 selectionTexture = SLOT_4_SELECTED[selectedSlot];
+            } else if (slotCount == 6 && selectedSlot < SLOT_6_SELECTED.length) {
+                selectionTexture = SLOT_6_SELECTED[selectedSlot];
             }
 
             if (selectionTexture != null) {
                 RenderSystem.setShaderTexture(0, selectionTexture);
+                // Lighten the color by blending 50% towards white
+                float lightRed   = red   + (1.0f - red)   * 0.5f;
+                float lightGreen = green + (1.0f - green) * 0.5f;
+                float lightBlue  = blue  + (1.0f - blue)  * 0.5f;
+                RenderSystem.setShaderColor(lightRed, lightGreen, lightBlue, 0.85f);
                 gfx.blit(selectionTexture, 0, 0, 0, 0, TEX_W, TEX_H, TEX_W, TEX_H);
+                // Restore the original pouch color for anything rendered after
+                RenderSystem.setShaderColor(red, green, blue, 0.85f);
             }
         }
 
@@ -187,95 +226,78 @@ public final class SelectionWheelHudOverlay {
         int selectedSlotX = 0;
         int selectedSlotY = 0;
 
-        if (player != null) {
-            // Calculate item scale with minimum and maximum size constraints
-            float itemScale = Math.min(Math.max(scale * 2.0f, 1.0f), 2.0f);
-            int scaledItemSize = (int)(16 * itemScale);
+        // Keep item size constant regardless of GUI scale
+        float itemScale = 1.0f;
+        int scaledItemSize = 16;
 
-            // Radius in texture coordinates where items should be placed
-            float radius = TEX_W * 0.28f;
+        // Radius in texture coordinates where items should be placed
+        float radius = TEX_W * 0.28f;
 
-            for (int i = 0; i < slotCount; i++) {
-                // Get item from the currently selected pouch
-                ItemStack stack = ClientPouchData.getItemInPouchSlot(player.getUUID(), currentPouchIndex, i);
+        for (int i = 0; i < slotCount; i++) {
+            // Get item from the currently selected pouch
+            ItemStack stack = ClientPouchData.getItemInPouchSlot(player.getUUID(), currentPouchIndex, i);
 
-                // Compute slot angle
-                // For 4-slot pouches: 0=upper-left(225°), 1=upper-right(315°), 2=lower-right(45°), 3=lower-left(135°)
-                double slotAngleDeg;
-                if (slotCount == 4) {
-                    // Start at 225° (upper-left) and rotate clockwise: 225, 315, 45, 135
-                    slotAngleDeg = (225 + i * 90) % 360;
-                } else {
-                    // Other pouches: start at top (-90°)
-                    slotAngleDeg = i * (360.0 / slotCount) - 90.0;
-                }
-                double slotAngleRad = Math.toRadians(slotAngleDeg);
+            // Compute slot angle based on pouch configuration
+            double slotAngleDeg;
+            if (slotCount == 4) {
+                // Start at 225° (upper-left) and rotate clockwise
+                slotAngleDeg = (225 + i * 90) % 360;
+            } else if (slotCount == 6) {
+                // Start at 240° (upper-left) and rotate clockwise
+                slotAngleDeg = (240 + i * 60) % 360;
+            } else {
+                // Other pouches: start at top (-90°)
+                slotAngleDeg = i * (360.0 / slotCount) - 90.0;
+            }
+            double slotAngleRad = Math.toRadians(slotAngleDeg);
 
-                // Position relative to wheel center in texture units
-                float texPosX = TEX_W / 2.0f + (float)Math.cos(slotAngleRad) * radius;
-                float texPosY = TEX_H / 2.0f + (float)Math.sin(slotAngleRad) * radius;
+            // Position relative to wheel center in texture units
+            float cosAngle = (float)Math.cos(slotAngleRad);
+            float sinAngle = (float)Math.sin(slotAngleRad);
+            float texPosX = TEX_W * 0.5f + cosAngle * radius;
+            float texPosY = TEX_H * 0.5f + sinAngle * radius;
 
-                // Convert texture coords to screen coords and center the item
-                float itemX = x + (texPosX * scale) - (scaledItemSize / 2.0f);
-                float itemY = y + (texPosY * scale) - (scaledItemSize / 2.0f);
+            // Convert texture coords to screen coords and center the item
+            float itemX = x + (texPosX * scale) - (scaledItemSize * 0.5f);
+            float itemY = y + (texPosY * scale) - (scaledItemSize * 0.5f);
 
-                if (!stack.isEmpty()) {
-                    gfx.pose().pushPose();
-                    gfx.pose().translate(itemX, itemY, 100);
-                    gfx.pose().scale(itemScale, itemScale, 1.0f);
-                    gfx.renderItem(stack, 0, 0);
-                    gfx.renderItemDecorations(mc.font, stack, 0, 0);
-                    gfx.pose().popPose();
-                }
-
-                if (i == selectedSlot) {
-                    selectedStack = stack;
-                    selectedSlotX = (int)itemX;
-                    selectedSlotY = (int)itemY;
-                }
+            if (!stack.isEmpty()) {
+                gfx.pose().pushPose();
+                gfx.pose().translate(itemX, itemY, 100);
+                gfx.pose().scale(itemScale, itemScale, 1.0f);
+                gfx.renderItem(stack, 0, 0);
+                gfx.renderItemDecorations(mc.font, stack, 0, 0);
+                gfx.pose().popPose();
             }
 
-            if (selectedSlot >= 0 && !selectedStack.isEmpty()) {
-                int tooltipX = selectedSlotX + scaledItemSize + 4;
-                int tooltipY = selectedSlotY;
-
-                if (slotCount == 4) {
-                    if (selectedSlot == 0) {
-                        tooltipX = selectedSlotX - 100;
-                    }
-                    else if (selectedSlot == 1) {
-                        tooltipX = selectedSlotX + scaledItemSize + 4;
-                    }
-                    else if (selectedSlot == 2) {
-                        tooltipX = selectedSlotX;
-                        tooltipY = selectedSlotY + scaledItemSize + 4;
-                    }
-                    else if (selectedSlot == 3) {
-                        tooltipX = selectedSlotX - 100;
-                    }
-                }
-
-                gfx.renderTooltip(mc.font, selectedStack, tooltipX, tooltipY);
+            if (i == selectedSlot) {
+                selectedStack = stack;
+                selectedSlotX = (int)itemX;
+                selectedSlotY = (int)itemY;
             }
+        }
+
+        // Render tooltip for selected item
+        if (selectedSlot >= 0 && !selectedStack.isEmpty()) {
+            int tooltipX = selectedSlotX + scaledItemSize + 4;
+            int tooltipY = selectedSlotY;
+
+            gfx.renderTooltip(mc.font, selectedStack, tooltipX, tooltipY);
         }
 
         // Draw cursor indicator line from center to mouse position
-        // Clamp the line endpoint to stay within the wheel radius
-        float maxLineLength = Math.min(scaledW, scaledH) * 0.45f;
-        float lineLength = Math.min(distanceFromCenter, maxLineLength);
-        
-        // Calculate line endpoint following mouse direction
-        float lineEndX = centerX;
-        float lineEndY = centerY;
-        if (distanceFromCenter > 0.1f) { // Avoid division by zero
-            float normalizedDeltaX = deltaX / distanceFromCenter;
-            float normalizedDeltaY = deltaY / distanceFromCenter;
-            lineEndX = centerX + normalizedDeltaX * lineLength;
-            lineEndY = centerY + normalizedDeltaY * lineLength;
-        }
-        
-        // Draw the indicator line (only if outside dead zone)
         if (distanceFromCenter > deadZoneRadius * 0.5f) {
+            // Clamp the line endpoint to stay within the wheel radius
+            float maxLineLength = Math.min(scaledW, scaledH) * 0.45f;
+            float lineLength = Math.min(distanceFromCenter, maxLineLength);
+            
+            // Calculate line endpoint following mouse direction
+            float invDistance = 1.0f / distanceFromCenter; // Optimization: avoid division in loop
+            float normalizedDeltaX = deltaX * invDistance;
+            float normalizedDeltaY = deltaY * invDistance;
+            float lineEndX = centerX + normalizedDeltaX * lineLength;
+            float lineEndY = centerY + normalizedDeltaY * lineLength;
+            
             gfx.pose().pushPose();
             // Draw center dot
             gfx.fill((int)centerX - 2, (int)centerY - 2, (int)centerX + 2, (int)centerY + 2, 0xFFFFFFFF);
@@ -316,12 +338,15 @@ public final class SelectionWheelHudOverlay {
     }
 
     /**
-     * Helper method to draw a line using filled rectangles
+     * Optimized helper method to draw a line using filled rectangles
      */
     private static void drawLine(GuiGraphics gfx, float x1, float y1, float x2, float y2, int color) {
         float dx = x2 - x1;
         float dy = y2 - y1;
         float length = (float)Math.sqrt(dx * dx + dy * dy);
+        
+        if (length < 0.1f) return; // Skip drawing for zero-length lines
+        
         float angle = (float)Math.atan2(dy, dx);
         
         gfx.pose().pushPose();

@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "show_notification": false,
+  "category": "equipment",
+  "pattern": [
+    "   ",
+    "LNL",
+    " P "
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:netherite_scrap"
+    },
+    "L": {
+      "item": "minecraft:gold_nugget"
+    },
+    "P": {
+      "item": "pouches:diamond_pouch"
+    }
+  },
+  "result": {
+    "item": "pouches:netherite_pouch",
+    "count": 1
+  }
+}

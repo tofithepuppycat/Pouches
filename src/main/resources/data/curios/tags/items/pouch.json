@@ -3,6 +3,7 @@
   "values": [
     "pouches:pouch",
     "pouches:iron_pouch",
-    "pouches:diamond_pouch"
+    "pouches:diamond_pouch",
+    "pouches:netherite_pouch"
   ]
 }

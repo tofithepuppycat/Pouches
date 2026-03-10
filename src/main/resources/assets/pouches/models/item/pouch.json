@@ -1,6 +1,15 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "pouches:item/pouch"
-  }
+    "layer0": "pouches:item/pouch_overlay",
+    "layer1": "pouches:item/pouch"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 0
+      },
+      "model": "pouches:item/pouch"
+    }
+  ]
 }

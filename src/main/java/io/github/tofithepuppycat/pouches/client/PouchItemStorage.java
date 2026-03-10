@@ -38,6 +38,11 @@ public class PouchItemStorage {
             return;
         }
 
+        // Don't process pouch interactions if any GUI is open
+        if (mc.screen != null) {
+            return;
+        }
+
         // Get the selected pouch slot from the wheel overlay
         int pouchSlot = SelectionWheelHudOverlay.getSelectedSlot();
 
@@ -73,8 +78,8 @@ public class PouchItemStorage {
             initialized = true;
         }
 
-        // Only allow crouch cycling when the overlay is visible (key is pressed)
-        if (ClientEvents.ModBus.SHOW_IMAGE_KEY.isDown()) {
+        // Only allow crouch cycling when the overlay is visible (key is pressed) and no GUI is open
+        if (ClientEvents.ModBus.SHOW_IMAGE_KEY.isDown() && mc.screen == null) {
             boolean sneaking = mc.player.isCrouching();
             long now = System.currentTimeMillis();
 

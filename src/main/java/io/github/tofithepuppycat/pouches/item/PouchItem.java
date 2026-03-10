@@ -3,6 +3,7 @@ package io.github.tofithepuppycat.pouches.item;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.DyeableLeatherItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -14,7 +15,7 @@ import top.theillusivec4.curios.api.type.capability.ICurioItem;
 
 import java.util.List;
 
-public class PouchItem extends Item implements ICurioItem {
+public class PouchItem extends Item implements ICurioItem, DyeableLeatherItem {
     private static final int DEFAULT_SLOTS = 2;
     private int slotsInPouch = 2;
 

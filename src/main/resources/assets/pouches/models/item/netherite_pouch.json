@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "pouches:item/netherite_pouch_overlay",
+    "layer1": "pouches:item/netherite_pouch"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 0
+      },
+      "model": "pouches:item/netherite_pouch"
+    }
+  ]
+}

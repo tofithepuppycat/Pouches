@@ -1,15 +1,12 @@
 package io.github.tofithepuppycat.pouches.util;
 
-import io.github.tofithepuppycat.pouches.capability.PouchCapability;
-import io.github.tofithepuppycat.pouches.capability.PouchCapabilityProvider;
-import io.github.tofithepuppycat.pouches.inventory.PouchInventory;
+import java.util.concurrent.atomic.AtomicReference;
+
 import io.github.tofithepuppycat.pouches.item.PouchItem;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeableLeatherItem;
 import net.minecraft.world.item.ItemStack;
 import top.theillusivec4.curios.api.CuriosApi;
-
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class PouchHelper {
     /**
@@ -35,19 +32,23 @@ public class PouchHelper {
     }
 
     /**
-     * Sets an item in a specific pouch slot for a given pouch index
+     * Sets an item in a specific pouch slot for a given pouch index.
+     * pouchIndex is the Nth actual PouchItem, skipping empty Curios slots.
      */
     public static void setItemInPouchSlot(Player player, int pouchIndex, int pouchSlot, ItemStack stack) {
         try {
             CuriosApi.getCuriosInventory(player).ifPresent(handler -> {
                 handler.getStacksHandler("pouch").ifPresent(stacksHandler -> {
-                    if (pouchIndex >= 0 && pouchIndex < stacksHandler.getSlots()) {
-                        ItemStack pouchStack = stacksHandler.getStacks().getStackInSlot(pouchIndex);
+                    int found = 0;
+                    for (int i = 0; i < stacksHandler.getSlots(); i++) {
+                        ItemStack pouchStack = stacksHandler.getStacks().getStackInSlot(i);
                         if (!pouchStack.isEmpty() && pouchStack.getItem() instanceof PouchItem) {
-                            // Modify the NBT
-                            PouchItem.setItemInSlot(pouchStack, pouchSlot, stack);
-                            // Explicitly set the stack back to ensure changes persist
-                            stacksHandler.getStacks().setStackInSlot(pouchIndex, pouchStack);
+                            if (found == pouchIndex) {
+                                PouchItem.setItemInSlot(pouchStack, pouchSlot, stack);
+                                stacksHandler.getStacks().setStackInSlot(i, pouchStack);
+                                return;
+                            }
+                            found++;
                         }
                     }
                 });
@@ -58,7 +59,9 @@ public class PouchHelper {
     }
 
     /**
-     * Gets the equipped pouch ItemStack at the given index
+     * Gets the equipped pouch ItemStack at the given index.
+     * pouchIndex is the Nth actual PouchItem, skipping empty Curios slots
+     * (which may exist from enchantment-granted extra slots).
      */
     public static ItemStack getEquippedPouch(Player player, int pouchIndex) {
         AtomicReference<ItemStack> result = new AtomicReference<>(ItemStack.EMPTY);
@@ -66,10 +69,15 @@ public class PouchHelper {
         try {
             CuriosApi.getCuriosInventory(player).ifPresent(handler -> {
                 handler.getStacksHandler("pouch").ifPresent(stacksHandler -> {
-                    if (pouchIndex >= 0 && pouchIndex < stacksHandler.getSlots()) {
-                        ItemStack stack = stacksHandler.getStacks().getStackInSlot(pouchIndex);
+                    int found = 0;
+                    for (int i = 0; i < stacksHandler.getSlots(); i++) {
+                        ItemStack stack = stacksHandler.getStacks().getStackInSlot(i);
                         if (!stack.isEmpty() && stack.getItem() instanceof PouchItem) {
-                            result.set(stack);
+                            if (found == pouchIndex) {
+                                result.set(stack);
+                                return;
+                            }
+                            found++;
                         }
                     }
                 });
@@ -139,5 +147,18 @@ public class PouchHelper {
         }
         
         return slotCounts;
+    }
+
+    /**
+     * Gets the color of a pouch at the given index.
+     * Returns -1 if the pouch is not dyed, so callers can skip tinting.
+     */
+    public static int getPouchColor(Player player, int pouchIndex) {
+        ItemStack pouchStack = getEquippedPouch(player, pouchIndex);
+        if (!pouchStack.isEmpty() && pouchStack.getItem() instanceof DyeableLeatherItem dyeable
+                && dyeable.hasCustomColor(pouchStack)) {
+            return dyeable.getColor(pouchStack);
+        }
+        return -1; // Not dyed
     }
 }
