@@ -1,6 +1,7 @@
 package io.github.tofithepuppycat.pouches.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import io.github.tofithepuppycat.pouches.Config;
 import io.github.tofithepuppycat.pouches.Pouches;
 import io.github.tofithepuppycat.pouches.util.PouchHelper;
 import net.minecraft.client.Minecraft;
@@ -60,18 +61,19 @@ public final class SelectionWheelHudOverlay {
     private static int selectedSlot = -1;
     private static int previousSelectedSlot = -1;
     private static int currentPouchIndex = 0;
+    private static boolean toggleModeVisible = false;
     
     // State tracking for key press and mouse position reset
-    private static boolean wasKeyDown = false;
+    private static boolean wasOverlayActive = false;
     private static double initialMouseX = 0;
     private static double initialMouseY = 0;
 
     public static final IGuiOverlay HUD_IMAGE = (ForgeGui gui, GuiGraphics gfx, float partialTick, int width, int height) -> {
-        boolean isKeyDown = ClientEvents.ModBus.SHOW_IMAGE_KEY.isDown();
+        boolean isOverlayVisible = isOverlayVisible();
         
-        if (!isKeyDown) {
+        if (!isOverlayVisible) {
             // Reset state when key is released
-            wasKeyDown = false;
+            wasOverlayActive = false;
             previousSelectedSlot = -1;
             return;
         }
@@ -110,10 +112,10 @@ public final class SelectionWheelHudOverlay {
         double mouseY = mc.mouseHandler.ypos() * (double)mc.getWindow().getGuiScaledHeight() / (double)mc.getWindow().getScreenHeight();
         
         // Detect key press (transition from not pressed to pressed) and reset mouse position
-        if (!wasKeyDown) {
+        if (!wasOverlayActive) {
             initialMouseX = mouseX;
             initialMouseY = mouseY;
-            wasKeyDown = true;
+            wasOverlayActive = true;
         }
 
         // Calculate delta from initial mouse position (where key was pressed)
@@ -317,6 +319,30 @@ public final class SelectionWheelHudOverlay {
 
     public static int getCurrentPouchIndex() {
         return currentPouchIndex;
+    }
+
+    public static boolean isToggleModeEnabled() {
+        return Config.CLIENT.togglePouchWheelMode.get();
+    }
+
+    public static boolean isOverlayVisible() {
+        if (isToggleModeEnabled()) {
+            return toggleModeVisible;
+        }
+        return ClientEvents.ModBus.SHOW_IMAGE_KEY.isDown();
+    }
+
+    public static void toggleOverlayVisibility() {
+        setOverlayVisible(!toggleModeVisible);
+    }
+
+    public static void setOverlayVisible(boolean visible) {
+        toggleModeVisible = visible;
+        if (!visible) {
+            selectedSlot = -1;
+            previousSelectedSlot = -1;
+            wasOverlayActive = false;
+        }
     }
 
     public static void setCurrentPouchIndex(int index) {

@@ -22,11 +22,7 @@ public class PouchItemStorage {
 
     @SubscribeEvent
     public static void onKeyRelease(InputEvent.Key event) {
-        if (event.getAction() != org.lwjgl.glfw.GLFW.GLFW_RELEASE) {
-            return;
-        }
-
-        // Check if the released key matches the configured keybind
+        // Check if the key event matches the configured keybind
         if (event.getKey() != ClientEvents.ModBus.SHOW_IMAGE_KEY.getKey().getValue()) {
             return;
         }
@@ -42,6 +38,33 @@ public class PouchItemStorage {
         if (mc.screen != null) {
             return;
         }
+
+        if (SelectionWheelHudOverlay.isToggleModeEnabled()) {
+            if (event.getAction() != org.lwjgl.glfw.GLFW.GLFW_PRESS) {
+                return;
+            }
+
+            if (!SelectionWheelHudOverlay.isOverlayVisible()) {
+                if (PouchHelper.getAvailablePouches(player) > 0) {
+                    SelectionWheelHudOverlay.setOverlayVisible(true);
+                }
+                return;
+            }
+
+            transferSelectedSlot(player);
+            SelectionWheelHudOverlay.setOverlayVisible(false);
+            return;
+        }
+
+        if (event.getAction() != org.lwjgl.glfw.GLFW.GLFW_RELEASE) {
+            return;
+        }
+
+        transferSelectedSlot(player);
+    }
+
+    private static void transferSelectedSlot(Player player) {
+        Minecraft mc = Minecraft.getInstance();
 
         // Get the selected pouch slot from the wheel overlay
         int pouchSlot = SelectionWheelHudOverlay.getSelectedSlot();
@@ -78,8 +101,8 @@ public class PouchItemStorage {
             initialized = true;
         }
 
-        // Only allow crouch cycling when the overlay is visible (key is pressed) and no GUI is open
-        if (ClientEvents.ModBus.SHOW_IMAGE_KEY.isDown() && mc.screen == null) {
+        // Only allow crouch cycling when the overlay is visible and no GUI is open
+        if (SelectionWheelHudOverlay.isOverlayVisible() && mc.screen == null) {
             boolean sneaking = mc.player.isCrouching();
             long now = System.currentTimeMillis();
 
